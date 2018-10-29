@@ -2,13 +2,30 @@
 
 This is the fourth version of a SIFT (Scale Invariant Feature Transform) implementation using CUDA for GPUs from NVidia. The first version is from 2007 and GPUs have evolved since then. This version is slightly more precise and considerably faster than the previous versions and has been optimized for Kepler and later generations of GPUs.
 
-On a GTX 1060 GPU the code takes about 1.6 ms on a 1280x960 pixel image and 2.4 ms on a 1920x1080 pixel image. There is also code for brute-force matching of features that takes about 2.2 ms for two sets of around 1900 SIFT features each.
+On a GTX 1060 GPU the code takes about 1.2 ms on a 1280x960 pixel image and 1.7 ms on a 1920x1080 pixel image. There is also code for brute-force matching of features that takes about 2.2 ms for two sets of around 1900 SIFT features each.
 
 The code relies on CMake for compilation and OpenCV for image containers. OpenCV can however be quite easily changed to something else. The code can be relatively hard to read, given the way things have been parallelized for maximum speed.
 
 The code is free to use for non-commercial applications. If you use the code for research, please refer to the following paper.
 
 M. Bj&ouml;rkman, N. Bergstr&ouml;m and D. Kragic, "Detecting, segmenting and tracking unknown objects using multi-label MRF inference", CVIU, 118, pp. 111-127, January 2014. [ScienceDirect](http://www.sciencedirect.com/science/article/pii/S107731421300194X)
+
+## New version for Pascal (2018-10-26)
+
+There is a new version optimized for Pascal cards, but it should work also on many older cards. Since it includes some bug fixes that changes slightly how features are extracted, which might affect matching to features extracted using an older version, the changes are kept in a new branch (Pascal). The fixes include a small change in ScaleDown that corrects an odd behaviour for images with heights not divisible by 2^(#octaves). The second change is a correction of an improper shift of (0.5,0.5) pixels, when pixel values were read from the image to create a descriptor. 
+
+Then there are some improvements in terms of speed, especially in the Laplace function, that detects DoG features, and the LowPass function, that is seen as preprocessing and is not included in the benchmarking below. Maybe surprisingly, even if optimizations were done with respect to Pascal cards, these improvements were even better for older cards. The changes involve trying to make each CUDA thread have more work to do, using fewer thread blocks. For typical images of today, there will be enough blocks to feed the streaming multiprocessors anyway.
+
+Latest result of version under test:
+
+|         |                     | 1280x960 | 1920x1080 |  GFLOPS  | Bandwidth | Matching |
+| ------- | ------------------- | -------| ---------| ---------- | --------|--------|
+| Pascal  | GeForce GTX 1080 Ti |   0.6* |     0.8* |	10609    |  484    |   1.0 |
+| Pascal  | GeForce GTX 1060    |   1.2* |     1.7* |	3855    |  192    |   2.2 |
+| Maxwell | GeForce GTX 970     |   1.3* |     1.8* |    3494    |  224    |   2.5 |
+| Kepler  | Tesla K40c          |   2.4* |     3.4* |    4291    |  288    |   4.7 |
+
+Matching is done between two sets of 1911 and 2086 features respectively. 
 
 ## Benchmarking of new version (2018-08-22)
 
@@ -22,20 +39,11 @@ About every 2nd year, I try to update the code to gain even more speed through f
 | Kepler  | Tesla K40c          |   3.1  |     4.7  |    4291    |  288    |   4.7 |
 | Kepler  | GeForce GTX TITAN   |   2.9  |     4.3  |    4500    |  288    |   4.5 |
 
-Latest result of version under test:
-
-|         |                     | 1280x960 | 1920x1080 |  GFLOPS  | Bandwidth | Matching |
-| ------- | ------------------- | -------| ---------| ---------- | --------|--------|
-| Pascal  | GeForce GTX 1080 Ti |   0.6* |     0.8* |	10609    |  484    |   1.0 |
-| Pascal  | GeForce GTX 1060    |   1.2* |     1.7* |	3855    |  192    |   2.2 |
-| Maxwell | GeForce GTX 970     |   1.3* |     1.8* |    3494    |  224    |   2.5 |
-| Kepler  | Tesla K40c          |   2.4* |     3.4* |    4291    |  288    |   4.7 |
-
 Matching is done between two sets of 1818 and 1978 features respectively. 
 
 It's questionable whether further optimization really makes sense, given that the cost of just transfering an 1920x1080 pixel image to the device takes about 1.4 ms on a GTX 1080 Ti. Even if the brute force feature matcher is not much faster than earlier versions, it does not have the same O(N^2) temporary memory overhead, which is preferable if there are many features.
 
-## Benchmarking of previous version
+## Benchmarking of previous version (2017-05-24)
 
 Computational cost (in milliseconds) on different GPUs:
 
